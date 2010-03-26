@@ -59,6 +59,7 @@
     <Compile Include="AI\AISuperBrain.cs" />
     <Compile Include="AI\GridCellList.cs" />
     <Compile Include="Entity\AABB.cs" />
+    <Compile Include="Entity\City.cs" />
     <Compile Include="Entity\Entity.cs" />
     <Compile Include="Game.cs" />
     <Compile Include="Graphics\Camera.cs" />

@@ -1,6 +1,5 @@
-﻿
+﻿using Microsoft.Xna.Framework;
 
-using Microsoft.Xna.Framework;
 namespace ZombieCraft
 {
   struct InstanceTransformRef

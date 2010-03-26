@@ -21,12 +21,43 @@ namespace ZombieCraft
         grid.AddItem( ref entities[i] );
     }
 
+    public static void DrawGrid( Matrix view, Matrix projection )
+    {
+      grid.Draw( view, projection );
+    }
+
     public static void Update( ref Entity entity )
     {
-      entity.Transform.Position = entity.Transform.Position;
-      entity.Transform.Angle += .01f;
+      // update position
+      entity.Transform.Position = entity.NextPosition;
 
-      //entity.Transform.array[entity.Transform.index].Position = entity.Transform.array[entity.Transform.index].Position;
+      // update bounding box
+      entity.AABB.Min.X = entity.NextPosition.X - entity.HalfSize;
+      if ( entity.AABB.Min.X < grid.Min.X )
+        entity.AABB.Min.X = grid.Min.X;
+
+      entity.AABB.Min.Y = entity.NextPosition.Z - entity.HalfSize;
+      if ( entity.AABB.Min.Y < grid.Min.Y )
+        entity.AABB.Min.Y = grid.Min.Y;
+
+      entity.AABB.Max.X = entity.NextPosition.X + entity.HalfSize;
+      if ( entity.AABB.Max.X > grid.Max.X )
+        entity.AABB.Max.X = grid.Max.X - .0001f;
+
+      entity.AABB.Max.Y = entity.NextPosition.Z + entity.HalfSize;
+      if ( entity.AABB.Max.Y > grid.Max.Y )
+        entity.AABB.Max.Y = grid.Max.Y - .0001f;
+
+      // update place in grid
+      grid.UpdateItem( ref entity );
+
+      // check for collisions
+      //...
+
+      // update AI with a huge switch statement
+      //...
+      Matrix rotation = Matrix.CreateRotationY( MathHelper.ToRadians( .1f ) );
+      entity.NextPosition = Vector3.Transform( entity.Transform.Position, rotation );
     }
   }
 }

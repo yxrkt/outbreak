@@ -13,6 +13,8 @@ namespace ZombieCraft
     GridCell[] cells;
     public readonly Vector2 Min, Max;
     public readonly int Rows, Cols;
+    public readonly float CellColStep, CellRowStep;
+    private readonly Color boxLineColor = Color.Red;
 
     // debug fields
     VertexPositionColor[] gridLines;
@@ -23,6 +25,12 @@ namespace ZombieCraft
     SpriteFont debugFont;
     StringBuilder stringBuilder;
 
+    VertexPositionColor[] boxLineVerts;
+    int boxLineVertCount;
+
+#if !XBOX
+    int frame;
+#endif
 
     public AIGrid( float width, float height, int cols, int rows )
     {
@@ -35,8 +43,8 @@ namespace ZombieCraft
       Cols = cols;
       Rows = rows;
 
-      float xStep = width  / cols;
-      float zStep = height / rows;
+      CellColStep = width  / cols;
+      CellRowStep = height / rows;
 
       int cellCount = cols * rows;
       cells = new GridCell[cellCount];
@@ -52,12 +60,12 @@ namespace ZombieCraft
           int index = cols * r + c;
 
           min = new Vector2( x, z );
-          max = min + new Vector2( xStep, zStep );
+          max = min + new Vector2( CellColStep, CellRowStep );
           cells[index] = new GridCell( min, max, r, c );
 
-          x += xStep;
+          x += CellColStep;
         }
-        z += zStep;
+        z += CellRowStep;
       }
 
       InitializeDebug();
@@ -76,7 +84,7 @@ namespace ZombieCraft
       float col = Min.X;
       for ( int c = 0; c <= Cols; ++c )
       {
-        gridLines[vertex].Position = new Vector3( col, 0, -Min.Y );
+        gridLines[vertex].Position = new Vector3( col, 0, Min.Y );
         gridLines[vertex].Color = gridColor;
         vertex++;
 
@@ -87,10 +95,10 @@ namespace ZombieCraft
         col += xStep;
       }
 
-      float row = -Min.Y;
+      float row = Min.Y;
       for ( int r = 0; r <= Rows; ++r )
       {
-        gridLines[vertex].Position = new Vector3( -Min.X, 0, row );
+        gridLines[vertex].Position = new Vector3( Min.X, 0, row );
         gridLines[vertex].Color = gridColor;
         vertex++;
 
@@ -111,6 +119,12 @@ namespace ZombieCraft
       lineVertexDeclaration = new VertexDeclaration( ZombieCraft.Instance.GraphicsDevice,
                                                      VertexPositionColor.VertexElements );
 
+      int initialSize = 100;
+      boxLineVerts = new VertexPositionColor[initialSize];
+      for ( int i = 0; i < initialSize; ++i )
+        boxLineVerts[i].Color = boxLineColor;
+      boxLineVertCount = 0;
+
       // debug font
       debugFont = ZombieCraft.Instance.Content.Load<SpriteFont>( "Fonts/debugFont" );
       stringBuilder = new StringBuilder( 10 );
@@ -130,13 +144,14 @@ namespace ZombieCraft
       int rowMin = (int)( ( min.Y - Min.Y ) / cellHeight );
       int rowMax = (int)( ( max.Y - Min.Y ) / cellHeight );
 
-      // because we're using top-left rule, we need to make sure the maxs don't go out of bounds
+      // make sure the max's don't go out of bounds
       if ( colMax == Cols )
         colMax = colMin;
       if ( rowMax == Rows )
         rowMax = rowMin;
 
       GridCellListNode node = new GridCellListNode( entity.Index );
+      entity.GridNode = node;
 
       if ( colMin == colMax )
       {
@@ -169,6 +184,31 @@ namespace ZombieCraft
           cells[Cols * rowMax + colMax].Items.Add( node );
         }
       }
+
+      // box verts
+      int end = boxLineVertCount + 8;
+      while ( boxLineVerts.Length < end )
+      {
+        //VertexPositionColor[] temp = new VertexPositionColor[boxLineVerts.Length * 2];
+        //Array.Copy( boxLineVerts, temp, boxLineVertCount );
+        //boxLineVerts = temp;
+        boxLineVerts = new VertexPositionColor[boxLineVerts.Length * 2];
+
+        for ( int i = 0; i < boxLineVerts.Length; ++i )
+          boxLineVerts[i].Color = boxLineColor;
+      }
+
+      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Min.Y );
+      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Max.Y );
+
+      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Max.Y );
+      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Max.Y );
+
+      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Max.Y );
+      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Min.Y );
+
+      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Min.Y );
+      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Min.Y );
     }
 
     public void RemoveItem( ref Entity entity )
@@ -178,12 +218,205 @@ namespace ZombieCraft
         cell.Items.Remove( entity.Index );
     }
 
+    public void UpdateItem( ref Entity entity )
+    {
+      int minCol = (int)( ( entity.AABB.Min.X - Min.X ) / CellColStep );
+      int maxCol = (int)( ( entity.AABB.Max.X - Min.X ) / CellColStep );
+      int minRow = (int)( ( entity.AABB.Min.Y - Min.Y ) / CellRowStep );
+      int maxRow = (int)( ( entity.AABB.Max.Y - Min.Y ) / CellRowStep );
+
+      int cellType00, cellType01, cellType10, cellType11; // r, c
+      GridCell cell00, cell01, cell10, cell11; // r, c
+
+      int intersection = maxCol - minCol + 2 * ( maxRow - minRow );
+      switch ( intersection )
+      {
+        case 0: // AABB fits completely into one grid cell
+          cellType00 = ( ( ( minRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cell00 = cells[minRow * Cols + minCol];
+
+          for ( int i = 0; i < 4; ++i )
+          {
+            if ( i == cellType00 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell00.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell00.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell00.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( entity.GridNode.parent[i] != null )
+            {
+              entity.GridNode.parent[i].Remove( entity.GridNode );
+            }
+          }
+          break;
+        case 1: // AABB fits into two horizontally adjacent grid cells
+          cellType00 = ( ( ( minRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cellType01 = ( ( ( minRow & 1 ) << 1 ) | ( maxCol & 1 ) );
+          cell00 = cells[minRow * Cols + minCol];
+          cell01 = cells[minRow * Cols + maxCol];
+
+          for ( int i = 0; i < 4; ++i )
+          {
+            if ( i == cellType00 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell00.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell00.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell00.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( i == cellType01 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell01.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell01.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell01.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( entity.GridNode.parent[i] != null )
+            {
+              entity.GridNode.parent[i].Remove( entity.GridNode );
+            }
+          }
+          break;
+        case 2: // AABB fits into two vertically adjacent grid cells
+          cellType00 = ( ( ( minRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cellType10 = ( ( ( maxRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cell00 = cells[minRow * Cols + minCol];
+          cell10 = cells[maxRow * Cols + minCol];
+
+          for ( int i = 0; i < 4; ++i )
+          {
+            if ( i == cellType00 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell00.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell00.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell00.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( i == cellType10 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell10.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell10.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell10.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( entity.GridNode.parent[i] != null )
+            {
+              entity.GridNode.parent[i].Remove( entity.GridNode );
+            }
+          }
+          break;
+        case 3: // AABB fits into a square of four grid cells
+          cellType00 = ( ( ( minRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cellType01 = ( ( ( minRow & 1 ) << 1 ) | ( maxCol & 1 ) );
+          cellType10 = ( ( ( maxRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cellType11 = ( ( ( maxRow & 1 ) << 1 ) | ( maxCol & 1 ) );
+          cell00 = cells[minRow * Cols + minCol];
+          cell01 = cells[minRow * Cols + maxCol];
+          cell10 = cells[maxRow * Cols + minCol];
+          cell11 = cells[maxRow * Cols + maxCol];
+
+          for ( int i = 0; i < 4; ++i )
+          {
+            if ( i == cellType00 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell00.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell00.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell00.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( i == cellType01 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell01.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell01.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell01.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( i == cellType10 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell10.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell10.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell10.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( i == cellType11 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell11.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell11.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell11.Items.Add( entity.GridNode );
+              }
+            }
+          }
+          break;
+      }
+    }
+
     public void Draw( Matrix view, Matrix projection )
     {
 #if !XBOX
       GraphicsDevice device = ZombieCraft.Instance.GraphicsDevice;
 
       device.VertexDeclaration = lineVertexDeclaration;
+
+      // update aabb lines
+      int vertCount = 0;
+      foreach ( GridCell cell in cells )
+      {
+        for ( GridCellListNode node = cell.Items.First(); node != null; node = cell.Items.Next( node ) )
+        {
+          if ( node.debugFrame == frame )
+          {
+            AddAABBLines( ref vertCount, ref Entity.Entities[node.EntityIndex] );
+            node.debugFrame++;
+          }
+        }
+      }
+      frame++;
 
       lineEffectViewParam.SetValue( view );
       lineEffectProjectionParam.SetValue( projection );
@@ -193,6 +426,9 @@ namespace ZombieCraft
 
       device.DrawUserPrimitives( PrimitiveType.LineList, gridLines,
                                  0, gridLines.Length / 2 );
+
+      device.DrawUserPrimitives( PrimitiveType.LineList, boxLineVerts,
+                                 0, vertCount / 2 );
 
       lineEffect.CurrentTechnique.Passes[0].End();
       lineEffect.End();
@@ -228,6 +464,21 @@ namespace ZombieCraft
       }
 
       spriteBatch.End();
+    }
+
+    private void AddAABBLines( ref int vertCount, ref Entity entity )
+    {
+      boxLineVerts[vertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Min.Y );
+      boxLineVerts[vertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Max.Y );
+
+      boxLineVerts[vertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Max.Y );
+      boxLineVerts[vertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Max.Y );
+
+      boxLineVerts[vertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Max.Y );
+      boxLineVerts[vertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Min.Y );
+
+      boxLineVerts[vertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Min.Y );
+      boxLineVerts[vertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Min.Y );
     }
   }
 

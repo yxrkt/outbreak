@@ -8,17 +8,15 @@ using ContentTypes;
 
 namespace ZombieCraft
 {
-  static class ModelDrawer
+  static class InstancedModelDrawer
   {
     static Dictionary<InstancedModel, InstancedModelRenderData> instancedModels;
-    static List<StillModel> stillModels;
 
     public static Camera Camera;
 
-    static ModelDrawer()
+    static InstancedModelDrawer()
     {
       instancedModels = new Dictionary<InstancedModel, InstancedModelRenderData>( 4 );
-      stillModels = new List<StillModel>( 10 );
     }
 
     public static InstanceTransformRef GetInstanceRef( InstancedModel model )
@@ -49,9 +47,6 @@ namespace ZombieCraft
 
       foreach ( var kvp in instancedModels )
         kvp.Value.DrawInstances( ref view, ref projection, ref Camera.Position );
-
-      // Draw regular models
-      //...
     }
   }
 }

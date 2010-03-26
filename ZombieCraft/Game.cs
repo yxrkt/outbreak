@@ -13,6 +13,7 @@ using Microsoft.Xna.Framework.Graphics;
 using DebugSample;
 using System;
 using Utility;
+using Microsoft.Xna.Framework.Input;
 #endregion
 
 namespace ZombieCraft
@@ -46,8 +47,8 @@ namespace ZombieCraft
 
       Content.RootDirectory = "Content";
 
-      IsFixedTimeStep = true;
-      TargetElapsedTime = TimeSpan.FromSeconds( 1d / 30d );
+      //IsFixedTimeStep = true;
+      //TargetElapsedTime = TimeSpan.FromSeconds( 1d / 30d );
 
       graphics = new GraphicsDeviceManager( this );
 
@@ -56,6 +57,7 @@ namespace ZombieCraft
       graphics.SynchronizeWithVerticalRetrace = true;
 
 #if WINDOWS
+      IsMouseVisible = true;
       graphics.PreferredBackBufferWidth = 853;
       graphics.PreferredBackBufferHeight = 480;
 #else

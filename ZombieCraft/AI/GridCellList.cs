@@ -11,6 +11,7 @@ namespace ZombieCraft
     internal readonly GridCellListNode[] next;
     internal readonly GridCellListNode[] prev;
     internal readonly GridCellList[] parent;
+    public int debugFrame;
 
     public GridCellListNode( int entityIndex )
     {
@@ -18,6 +19,7 @@ namespace ZombieCraft
       next = new GridCellListNode[4];
       prev = new GridCellListNode[4];
       parent = new GridCellList[4];
+      debugFrame = 0;
     }
 
     public void Abandon()
@@ -64,6 +66,7 @@ namespace ZombieCraft
       else
       {
         tail.next[cellType] = node;
+        tail = node;
       }
 
       count++;
@@ -83,6 +86,8 @@ namespace ZombieCraft
 
       node.prev[cellType] = null;
       node.next[cellType] = null;
+
+      node.parent[cellType] = null;
 
       count--;
     }
