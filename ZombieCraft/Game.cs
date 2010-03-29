@@ -47,12 +47,9 @@ namespace ZombieCraft
 
       Content.RootDirectory = "Content";
 
-      //IsFixedTimeStep = true;
-      //TargetElapsedTime = TimeSpan.FromSeconds( 1d / 30d );
-
       graphics = new GraphicsDeviceManager( this );
 
-      //IsFixedTimeStep = true;
+      IsFixedTimeStep = false;
       //TargetElapsedTime = TimeSpan.FromSeconds( 1d / 30d );
       graphics.SynchronizeWithVerticalRetrace = true;
 

@@ -28,6 +28,10 @@ namespace ZombieCraft
     SpriteFont gameFont;
 
     const int nEntities = 10000;
+    int maxEntitiesPerFrame = nEntities / 4;
+    int nextEntityToUpdate = 0;
+    int entityBegin;
+    int entityEnd;
     Entity[] entities;
     City city;
     int scrollValue;
@@ -56,25 +60,27 @@ namespace ZombieCraft
 
       gameFont = content.Load<SpriteFont>( "Fonts/gamefont" );
 
-      int entityCount = 4;// nEntities;
-      float gridSize = 50;// 600;
+      int entityCount = nEntities;
+      float gridSize = 600;
+      maxEntitiesPerFrame = entityCount / 4;
 
       // create the camera
       float aspect = ScreenManager.Game.GraphicsDevice.Viewport.AspectRatio;
       InstancedModelDrawer.Camera = new Camera( MathHelper.PiOver4, aspect, 1f, 5000f,
                                        new Vector3( 0, gridSize, gridSize ), Vector3.Zero );
 
-      // create the zombie dinosaurs
+      // create the zombies
       entities = new Entity[entityCount];
       Entity.Entities = entities;
       InstancedModel model = content.Load<InstancedModel>( "Models/zombie" );
+      float scale = .95f * (float)Math.Sqrt( 2 ) / 2;
       for ( int i = 0; i < entityCount; ++i )
       {
         entities[i] = new Entity( i );
         entities[i].Transform = InstancedModelDrawer.GetInstanceRef( model );
-        entities[i].Transform.Position = new Vector3( gridSize * ( (float)random.NextDouble() - .5f ),
+        entities[i].Transform.Position = new Vector3( scale * gridSize * ( (float)random.NextDouble() - .5f ),
                                                       0,
-                                                      gridSize * ( (float)random.NextDouble() - .5f ) );
+                                                      scale * gridSize * ( (float)random.NextDouble() - .5f ) );
         entities[i].Transform.Axis  = InstancedModelDrawer.Camera.Up;
         entities[i].Transform.Angle = (float)random.NextDouble() * MathHelper.TwoPi;
         entities[i].Transform.Scale = 1f;
@@ -115,16 +121,41 @@ namespace ZombieCraft
 
       if ( IsActive )
       {
+        /*/
         int entityCount = entities.Length;
         for ( int i = 0; i < entityCount; ++i )
         {
-          /**/
           AISuperBrain.Update( ref entities[i] );
-          /*/
-          entities[i].Transform.Position = entities[i].Transform.Position;
-          entities[i].Transform.Angle += .01f;
-          /**/
         }
+        /*/
+        int entityCount = entities.Length;
+        int entitiesPerFrame = Math.Min( maxEntitiesPerFrame, entityCount );
+
+        if ( entityBegin == 0 && entityEnd == 0 )
+          entityEnd += entitiesPerFrame;
+
+        if ( entityBegin > entityEnd )
+        {
+          for ( int i = 0; i < entityEnd; ++i )
+            AISuperBrain.Update( ref entities[i] );
+          for ( int i = entityEnd; i < entityBegin; ++i )
+            ; // update position
+          for ( int i = entityBegin; i < entityCount; ++i )
+            AISuperBrain.Update( ref entities[i] );
+        }
+        else
+        {
+          for ( int i = 0; i < entityBegin; ++i )
+            ;// update position
+          for ( int i = entityBegin; i < entityEnd; ++i )
+            AISuperBrain.Update( ref entities[i] );
+          for ( int i = entityEnd; i < entityCount; ++i )
+            ;// update position
+        }
+
+        entityBegin = ( entityBegin + entitiesPerFrame ) % entityCount;
+        entityEnd = ( entityEnd + entitiesPerFrame ) % entityCount;
+        /**/
       }
     }
 
@@ -144,7 +175,8 @@ namespace ZombieCraft
 
       if ( input.IsPauseGame( ControllingPlayer ) || gamePadDisconnected )
       {
-        ScreenManager.AddScreen( new PauseMenuScreen(), ControllingPlayer );
+        //ScreenManager.AddScreen( new PauseMenuScreen(), ControllingPlayer );
+        ZombieCraft.Instance.Exit();
       }
       else
       {

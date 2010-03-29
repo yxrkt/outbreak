@@ -186,29 +186,14 @@ namespace ZombieCraft
       }
 
       // box verts
-      int end = boxLineVertCount + 8;
-      while ( boxLineVerts.Length < end )
+      boxLineVertCount += 8;
+      while ( boxLineVerts.Length < boxLineVertCount )
       {
-        //VertexPositionColor[] temp = new VertexPositionColor[boxLineVerts.Length * 2];
-        //Array.Copy( boxLineVerts, temp, boxLineVertCount );
-        //boxLineVerts = temp;
         boxLineVerts = new VertexPositionColor[boxLineVerts.Length * 2];
 
         for ( int i = 0; i < boxLineVerts.Length; ++i )
           boxLineVerts[i].Color = boxLineColor;
       }
-
-      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Min.Y );
-      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Max.Y );
-
-      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Max.Y );
-      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Max.Y );
-
-      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Max.Y );
-      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Min.Y );
-
-      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Min.Y );
-      //boxLineVerts[boxLineVertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Min.Y );
     }
 
     public void RemoveItem( ref Entity entity )
@@ -225,9 +210,186 @@ namespace ZombieCraft
       int minRow = (int)( ( entity.AABB.Min.Y - Min.Y ) / CellRowStep );
       int maxRow = (int)( ( entity.AABB.Max.Y - Min.Y ) / CellRowStep );
 
+      //minCol = minCol < 0 ? 0 : minCol;
+      //maxCol = maxCol
+
       int cellType00, cellType01, cellType10, cellType11; // r, c
       GridCell cell00, cell01, cell10, cell11; // r, c
 
+      /*/
+      if ( minCol == maxCol )
+      {
+        if ( minRow == maxRow )
+        {
+          cellType00 = ( ( ( minRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cell00 = cells[minRow * Cols + minCol];
+
+          for ( int i = 0; i < 4; ++i )
+          {
+            if ( i == cellType00 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell00.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell00.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell00.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( entity.GridNode.parent[i] != null )
+            {
+              entity.GridNode.parent[i].Remove( entity.GridNode );
+            }
+          }
+        }
+        else
+        {
+          cellType00 = ( ( ( minRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cellType10 = ( ( ( maxRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cell00 = cells[minRow * Cols + minCol];
+          cell10 = cells[maxRow * Cols + minCol];
+
+          for ( int i = 0; i < 4; ++i )
+          {
+            if ( i == cellType00 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell00.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell00.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell00.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( i == cellType10 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell10.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell10.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell10.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( entity.GridNode.parent[i] != null )
+            {
+              entity.GridNode.parent[i].Remove( entity.GridNode );
+            }
+          }
+        }
+      }
+      else
+      {
+        if ( minRow == maxRow )
+        {
+          cellType00 = ( ( ( minRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cellType01 = ( ( ( minRow & 1 ) << 1 ) | ( maxCol & 1 ) );
+          cell00 = cells[minRow * Cols + minCol];
+          cell01 = cells[minRow * Cols + maxCol];
+
+          for ( int i = 0; i < 4; ++i )
+          {
+            if ( i == cellType00 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell00.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell00.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell00.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( i == cellType01 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell01.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell01.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell01.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( entity.GridNode.parent[i] != null )
+            {
+              entity.GridNode.parent[i].Remove( entity.GridNode );
+            }
+          }
+        }
+        else
+        {
+          cellType00 = ( ( ( minRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cellType01 = ( ( ( minRow & 1 ) << 1 ) | ( maxCol & 1 ) );
+          cellType10 = ( ( ( maxRow & 1 ) << 1 ) | ( minCol & 1 ) );
+          cellType11 = ( ( ( maxRow & 1 ) << 1 ) | ( maxCol & 1 ) );
+          cell00 = cells[minRow * Cols + minCol];
+          cell01 = cells[minRow * Cols + maxCol];
+          cell10 = cells[maxRow * Cols + minCol];
+          cell11 = cells[maxRow * Cols + maxCol];
+
+          for ( int i = 0; i < 4; ++i )
+          {
+            if ( i == cellType00 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell00.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell00.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell00.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( i == cellType01 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell01.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell01.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell01.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( i == cellType10 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell10.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell10.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell10.Items.Add( entity.GridNode );
+              }
+            }
+            else if ( i == cellType11 )
+            {
+              if ( entity.GridNode.parent[i] == null )
+              {
+                cell11.Items.Add( entity.GridNode );
+              }
+              else if ( entity.GridNode.parent[i] != cell11.Items )
+              {
+                entity.GridNode.parent[i].Remove( entity.GridNode );
+                cell11.Items.Add( entity.GridNode );
+              }
+            }
+          }
+        }
+      }
+      /*/
       int intersection = maxCol - minCol + 2 * ( maxRow - minRow );
       switch ( intersection )
       {
@@ -394,6 +556,7 @@ namespace ZombieCraft
           }
           break;
       }
+      /**/
     }
 
     public void Draw( Matrix view, Matrix projection )
