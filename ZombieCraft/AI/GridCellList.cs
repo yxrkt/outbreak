@@ -34,7 +34,7 @@ namespace ZombieCraft
 
   class GridCellList
   {
-    readonly int cellType;
+    public readonly int cellType;
 
     GridCellListNode head;
     GridCellListNode tail;

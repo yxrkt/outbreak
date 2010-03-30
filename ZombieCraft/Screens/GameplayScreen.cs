@@ -29,7 +29,6 @@ namespace ZombieCraft
 
     const int nEntities = 10000;
     int maxEntitiesPerFrame = nEntities / 4;
-    int nextEntityToUpdate = 0;
     int entityBegin;
     int entityEnd;
     Entity[] entities;
