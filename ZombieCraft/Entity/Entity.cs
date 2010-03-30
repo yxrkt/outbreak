@@ -15,6 +15,9 @@ namespace ZombieCraft
     public Vector3 NextPosition;            // Target position to move to next frame
     public float NextAngle;                 // Target angle to orient to next frame
     public GridCellListNode GridNode;       // Reference to node in grid
+    public Vector3 Direction;
+    public float StateTime;
+    public float StateDuration;
 
     public static Entity[] Entities;        // Reference to global array for convenience
 
@@ -28,6 +31,9 @@ namespace ZombieCraft
       NextPosition = Vector3.Zero;
       NextAngle = 0f;
       GridNode = null;
+      Direction = Vector3.Zero;
+      StateTime = 0;
+      StateDuration = 0;
     }
   }
 }

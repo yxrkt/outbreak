@@ -65,6 +65,7 @@
   <ItemGroup>
     <Compile Include="AI\AIGrid.cs" />
     <Compile Include="AI\AISuperBrain.cs" />
+    <Compile Include="AI\CollisionDetector.cs" />
     <Compile Include="AI\GridCellList.cs" />
     <Compile Include="Components\ScreenManager\GameScreen.cs" />
     <Compile Include="Components\ScreenManager\InputState.cs" />

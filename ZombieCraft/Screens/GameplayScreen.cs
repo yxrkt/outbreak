@@ -120,36 +120,33 @@ namespace ZombieCraft
 
       if ( IsActive )
       {
-        /*/
-        int entityCount = entities.Length;
-        for ( int i = 0; i < entityCount; ++i )
-        {
-          AISuperBrain.Update( ref entities[i] );
-        }
-        /*/
         int entityCount = entities.Length;
         int entitiesPerFrame = Math.Min( maxEntitiesPerFrame, entityCount );
 
         if ( entityBegin == 0 && entityEnd == 0 )
           entityEnd += entitiesPerFrame;
 
+        AISuperBrain.Elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        CollisionDetector.Update( entities );
+
         if ( entityBegin > entityEnd )
         {
           for ( int i = 0; i < entityEnd; ++i )
             AISuperBrain.Update( ref entities[i] );
           for ( int i = entityEnd; i < entityBegin; ++i )
-            ; // update position
+            AISuperBrain.UpdateFast( ref entities[i] );
           for ( int i = entityBegin; i < entityCount; ++i )
             AISuperBrain.Update( ref entities[i] );
         }
         else
         {
           for ( int i = 0; i < entityBegin; ++i )
-            ;// update position
+            AISuperBrain.UpdateFast( ref entities[i] );
           for ( int i = entityBegin; i < entityEnd; ++i )
             AISuperBrain.Update( ref entities[i] );
           for ( int i = entityEnd; i < entityCount; ++i )
-            ;// update position
+            AISuperBrain.UpdateFast( ref entities[i] );
         }
 
         entityBegin = ( entityBegin + entitiesPerFrame ) % entityCount;

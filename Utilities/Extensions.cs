@@ -50,6 +50,11 @@ namespace Utility
 
   public static class RandomExtensions
   {
+    public static float NextFloat( this Random random )
+    {
+      return (float)random.NextDouble();
+    }
+
     public static Vector3 NextVector3( this Random random )
     {
       return new Vector3( (float)random.NextDouble() * 2f - 1f,
