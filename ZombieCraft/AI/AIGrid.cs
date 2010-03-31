@@ -16,6 +16,11 @@ namespace ZombieCraft
     public readonly float CellColStep, CellRowStep;
     private readonly Color boxLineColor = Color.Red;
 
+    public GridCellList this[int row, int col]
+    {
+      get { return cells[row * Cols + col].Items; }
+    }
+
     // debug fields
     VertexPositionColor[] gridLines;
     Effect lineEffect;

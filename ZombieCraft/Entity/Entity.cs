@@ -18,6 +18,7 @@ namespace ZombieCraft
     public Vector3 Direction;
     public float StateTime;
     public float StateDuration;
+    public Behavior Behavior;
 
     public static Entity[] Entities;        // Reference to global array for convenience
 
@@ -34,6 +35,7 @@ namespace ZombieCraft
       Direction = Vector3.Zero;
       StateTime = 0;
       StateDuration = 0;
+      Behavior = null;
     }
   }
 }

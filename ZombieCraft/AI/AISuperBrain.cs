@@ -7,6 +7,8 @@ using Utility;
 
 namespace ZombieCraft
 {
+  delegate void Behavior( ref Entity entity );
+
   static class AISuperBrain
   {
     static readonly Vector2 durationRange = new Vector2( 1.5f, 6f );
@@ -26,6 +28,8 @@ namespace ZombieCraft
       min = grid.Min;
       max = grid.Max - new Vector2( .0001f, .0001f );
       rotation = Matrix.CreateRotationY( MathHelper.ToRadians( .1f ) );
+
+      CollisionManager.Initialize( grid, 4 );
     }
 
     public static void PopulateGrid( Entity[] entities )
@@ -42,35 +46,11 @@ namespace ZombieCraft
     public static void Update( ref Entity entity )
     {
       // update AI with a huge switch statement
-      // just wander for now...
-      if ( entity.StateTime < entity.StateDuration )
+      if ( entity.Behavior != null )
       {
-        entity.NextPosition.X += Elapsed * entity.Direction.X;
-        entity.NextPosition.Z += Elapsed * entity.Direction.Z;
         entity.StateTime += Elapsed;
+        entity.Behavior( ref entity );
       }
-      else
-      {
-        entity.StateTime = 0;
-        entity.StateDuration = MathHelper.Lerp( durationRange.X, durationRange.Y, random.NextFloat() );
-
-        float speed = MathHelper.Lerp( speedRange.X, speedRange.Y, random.NextFloat() );
-
-        Vector3 nextDirection = random.NextVector3();
-
-        if ( nextDirection.X == 0 && nextDirection.Z == 0 )
-          nextDirection.X = speed;
-        else
-          nextDirection.Normalize();
-
-        nextDirection *= speed;
-
-        //if ( Vector3.Dot( entity.Direction, nextDirection ) < 0 )
-        //  nextDirection *= -1;
-
-        entity.Direction = nextDirection;
-      }
-
 
       // update position
       entity.Transform.Position = entity.NextPosition;
@@ -95,6 +75,43 @@ namespace ZombieCraft
       entity.StateTime += Elapsed;
 
       entity.Transform.array[entity.Transform.index].Position = entity.NextPosition;
+    }
+
+    // states
+    public static void Idle( ref Entity entity )
+    {
+    }
+
+    public static void Wander( ref Entity entity )
+    {
+      // just wander for now...
+      if ( entity.StateTime < entity.StateDuration )
+      {
+        entity.NextPosition.X += Elapsed * entity.Direction.X;
+        entity.NextPosition.Z += Elapsed * entity.Direction.Z;
+        entity.StateTime += Elapsed;
+      }
+      else
+      {
+        entity.StateTime = 0;
+        entity.StateDuration = MathHelper.Lerp( durationRange.X, durationRange.Y, random.NextFloat() );
+
+        if ( entity.Direction.X == 0 || entity.Direction.Z == 0 )
+        {
+          float speed = MathHelper.Lerp( speedRange.X, speedRange.Y, random.NextFloat() );
+          Vector3 nextDirection = random.NextVector3();
+          if ( nextDirection.X == 0 && nextDirection.Z == 0 )
+            nextDirection.X = speed;
+          else
+            nextDirection.Normalize();
+          nextDirection *= speed;
+          entity.Direction = nextDirection;
+        }
+        else
+        {
+          entity.Direction = Vector3.Zero;
+        }
+      }
     }
   }
 }

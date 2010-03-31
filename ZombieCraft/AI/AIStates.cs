@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace ZombieCraft
 {
-  static class CollisionDetector
+  enum AIState
   {
-    public static void Update( Entity[] entities )
-    {
-    }
+    Idle,
+    Wander,
   }
 }

@@ -72,7 +72,7 @@ namespace ZombieCraft
       entities = new Entity[entityCount];
       Entity.Entities = entities;
       InstancedModel model = content.Load<InstancedModel>( "Models/zombie" );
-      float scale = .95f * (float)Math.Sqrt( 2 ) / 2;
+      float scale = .95f;// *(float)Math.Sqrt( 2 ) / 2;
       for ( int i = 0; i < entityCount; ++i )
       {
         entities[i] = new Entity( i );
@@ -93,6 +93,7 @@ namespace ZombieCraft
                                             entities[i].Transform.Position.Z );
         entities[i].AABB = new AABB( gridPosition - boundsOffset,
                                      gridPosition + boundsOffset );
+        entities[i].Behavior += AISuperBrain.Wander;
       }
 
       AISuperBrain.InitializeGrid( gridSize, gridSize, (int)( gridSize / 25 ), (int)( gridSize / 25 ) );
@@ -128,7 +129,7 @@ namespace ZombieCraft
 
         AISuperBrain.Elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-        CollisionDetector.Update( entities );
+        CollisionManager.Update();
 
         if ( entityBegin > entityEnd )
         {

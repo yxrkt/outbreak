@@ -56,8 +56,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AI\AIGrid.cs" />
+    <Compile Include="AI\AIStates.cs" />
     <Compile Include="AI\AISuperBrain.cs" />
-    <Compile Include="AI\CollisionDetector.cs" />
+    <Compile Include="AI\CollisionManager.cs" />
     <Compile Include="AI\GridCellList.cs" />
     <Compile Include="Entity\AABB.cs" />
     <Compile Include="Entity\City.cs" />
