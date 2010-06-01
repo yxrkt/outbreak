@@ -80,6 +80,8 @@ namespace ZombieCraft
       set { traceEnabled = value; }
     }
 
+    public InputState Input { get { return input; } }
+
 
     #endregion
 

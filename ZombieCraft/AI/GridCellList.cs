@@ -5,20 +5,20 @@ using System.Text;
 
 namespace ZombieCraft
 {
-  class GridCellListNode
+  class EntityListNode
   {
     public readonly int EntityIndex;
-    internal readonly GridCellListNode[] next;
-    internal readonly GridCellListNode[] prev;
-    internal readonly GridCellList[] parent;
+    internal readonly EntityListNode[] next;
+    internal readonly EntityListNode[] prev;
+    internal readonly EntityList[] parent;
     public int debugFrame;
 
-    public GridCellListNode( int entityIndex )
+    public EntityListNode( int entityIndex )
     {
       EntityIndex = entityIndex;
-      next = new GridCellListNode[4];
-      prev = new GridCellListNode[4];
-      parent = new GridCellList[4];
+      next = new EntityListNode[4];
+      prev = new EntityListNode[4];
+      parent = new EntityList[4];
       debugFrame = 0;
     }
 
@@ -32,22 +32,22 @@ namespace ZombieCraft
     }
   }
 
-  class GridCellList
+  class EntityList
   {
     public readonly int cellType;
 
-    GridCellListNode head;
-    GridCellListNode tail;
+    EntityListNode head;
+    EntityListNode tail;
 
     int count;
     public int Count { get { return count; } }
 
-    public GridCellList( int row, int col )
+    public EntityList( int row, int col )
     {
       cellType = ( ( ( row & 1 ) << 1 ) | ( col & 1 ) );
     }
 
-    public void Add( GridCellListNode node )
+    public void Add( EntityListNode node )
     {
 #if DEBUG
       if ( node.parent[cellType] != null )
@@ -72,7 +72,7 @@ namespace ZombieCraft
       count++;
     }
 
-    internal void Remove( GridCellListNode node )
+    internal void Remove( EntityListNode node )
     {
       if ( node == head )
         head = node.next[cellType];
@@ -94,7 +94,7 @@ namespace ZombieCraft
 
     public void Remove( int entityIndex )
     {
-      for ( GridCellListNode node = head; node != null; node = node.next[cellType] )
+      for ( EntityListNode node = head; node != null; node = node.next[cellType] )
       {
         if ( node.EntityIndex == entityIndex )
         {
@@ -110,17 +110,17 @@ namespace ZombieCraft
         Remove( head );
     }
 
-    public GridCellListNode First()
+    public EntityListNode First()
     {
       return head;
     }
 
-    public GridCellListNode Last()
+    public EntityListNode Last()
     {
       return tail;
     }
 
-    public GridCellListNode Next( GridCellListNode node )
+    public EntityListNode Next( EntityListNode node )
     {
       return node.next[cellType];
     }

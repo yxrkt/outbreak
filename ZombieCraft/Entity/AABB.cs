@@ -16,5 +16,13 @@ namespace ZombieCraft
       Min = min;
       Max = max;
     }
+
+    public void GetVerts( ref Vector2[] verts )
+    {
+      verts[0] = Min;
+      verts[1] = new Vector2( Min.X, Max.Y );
+      verts[2] = Max;
+      verts[3] = new Vector2( Max.X, Min.Y );
+    }
   }
 }

@@ -16,6 +16,9 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using ContentTypes;
 using System.Diagnostics;
+using System.Collections;
+using System.Collections.Generic;
+using Utility;
 #endregion
 
 namespace ZombieCraft
@@ -34,6 +37,19 @@ namespace ZombieCraft
     Entity[] entities;
     City city;
     int scrollValue;
+    Texture2D cursor;
+    Texture2D[] availableBeacons;
+    Quad beaconHaloGhost;
+    float closeZoom = 100f;
+    float farZoom = 1150f;
+    float minBeaconRadius = 200;
+    float maxBeaconRadius = 1200;
+    float totalUnpausedTime = 0f;
+    Camera camera;
+
+    // eventually, these will be part of some sort of player class
+    Beacon[] beacons;
+    List<int> placedBeacons = new List<int>( 3 );
 
     Random random = new Random( 1 );
 
@@ -59,24 +75,55 @@ namespace ZombieCraft
 
       gameFont = content.Load<SpriteFont>( "Fonts/gamefont" );
 
-      int entityCount = nEntities;
-      float gridSize = 600;
-      maxEntitiesPerFrame = entityCount / 4;
+      //TODO: Throw these in player class
+      cursor = content.Load<Texture2D>( "Textures/cursor" );
+      availableBeacons = new Texture2D[]
+      {
+        content.Load<Texture2D>( "Textures/beaconLabelA" ),
+        content.Load<Texture2D>( "Textures/beaconLabelB" ),
+        content.Load<Texture2D>( "Textures/beaconLabelX" ),
+      };
+      Texture2D halo = content.Load<Texture2D>( "Textures/halo" );
+      beaconHaloGhost = new Quad( Quad.XZPlaneUnitQuad, Vector3.Zero, halo );
+      beaconHaloGhost.Color = new Color( Color.Yellow, .5f );
+
+      int entityCount = /**/3;/*/nEntities;/**/
+      float gridSize  = /**/50;/*/1200;/**/
+      maxEntitiesPerFrame = (int)MathHelper.Max( entityCount / 4, 1 );
 
       // create the camera
       float aspect = ScreenManager.Game.GraphicsDevice.Viewport.AspectRatio;
       InstancedModelDrawer.Camera = new Camera( MathHelper.PiOver4, aspect, 1f, 5000f,
-                                       new Vector3( 0, gridSize, gridSize ), Vector3.Zero );
+                                                new Vector3( 0, gridSize, gridSize ), Vector3.Zero );
+      camera = InstancedModelDrawer.Camera;
 
-      // create the zombies
+      // create the city
+      city = new City();
+
+      // create the beacon
+      beacons = new Beacon[3]{ new Beacon( 0 ), new Beacon( 1 ), new Beacon( 2 ) };
+      Beacon.Beacons = beacons;
+
+      // create the civilians and zombies
       entities = new Entity[entityCount];
       Entity.Entities = entities;
-      InstancedModel model = content.Load<InstancedModel>( "Models/zombie" );
+      Entity.CivilianModel = content.Load<InstancedModel>( "Models/civilian" );
+      Entity.ZombieModel = content.Load<InstancedModel>( "Models/zombie" );
       float scale = .95f;// *(float)Math.Sqrt( 2 ) / 2;
+      /**/
       for ( int i = 0; i < entityCount; ++i )
       {
         entities[i] = new Entity( i );
-        entities[i].Transform = InstancedModelDrawer.GetInstanceRef( model );
+        if ( i == 0 )
+        {
+          entities[i].Transform = InstancedModelDrawer.GetInstanceRef( Entity.ZombieModel );
+          entities[i].Type = EntityType.Zombie;
+        }
+        else
+        {
+          entities[i].Transform = InstancedModelDrawer.GetInstanceRef( Entity.CivilianModel );
+          entities[i].Type = EntityType.Civilian;
+        }
         entities[i].Transform.Position = new Vector3( scale * gridSize * ( (float)random.NextDouble() - .5f ),
                                                       0,
                                                       scale * gridSize * ( (float)random.NextDouble() - .5f ) );
@@ -93,14 +140,18 @@ namespace ZombieCraft
                                             entities[i].Transform.Position.Z );
         entities[i].AABB = new AABB( gridPosition - boundsOffset,
                                      gridPosition + boundsOffset );
+        //entities[i].Behavior += AISuperBrain.Wander;
         entities[i].Behavior += AISuperBrain.Wander;
+        entities[i].MoveSpeed = 10;
       }
+      /*/
+
+      /**/
+
+
 
       AISuperBrain.InitializeGrid( gridSize, gridSize, (int)( gridSize / 25 ), (int)( gridSize / 25 ) );
-      AISuperBrain.PopulateGrid( entities );
-
-      // create the city
-      city = new City();
+      AISuperBrain.PopulateGrid( entities, Building.Buildings );
 
       ScreenManager.Game.ResetElapsedTime();
     }
@@ -128,6 +179,7 @@ namespace ZombieCraft
           entityEnd += entitiesPerFrame;
 
         AISuperBrain.Elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        AISuperBrain.PathsFound = 0;
 
         CollisionManager.Update();
 
@@ -153,6 +205,8 @@ namespace ZombieCraft
         entityBegin = ( entityBegin + entitiesPerFrame ) % entityCount;
         entityEnd = ( entityEnd + entitiesPerFrame ) % entityCount;
         /**/
+
+        totalUnpausedTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
       }
     }
 
@@ -177,15 +231,85 @@ namespace ZombieCraft
       }
       else
       {
-        float zoom = input.CurrentGamePadStates[0].Triggers.Left - 
-                     input.CurrentGamePadStates[0].Triggers.Right;
+        float mouseZoomSensitivity = 1f;
+        float triggerZoomSensitivity = 9f;
 
+        Vector3 zoomVector = Vector3.Normalize( new Vector3( 0, 1, 1 ) );
+
+        // camera zoom (controller)
+        float zoom = triggerZoomSensitivity * ( input.CurrentGamePadStates[0].Triggers.Left - 
+                                                input.CurrentGamePadStates[0].Triggers.Right );
+
+        // camera zoom (mouse wheel)
         float lastScrollValue = scrollValue;
         scrollValue = Mouse.GetState().ScrollWheelValue;
         if ( lastScrollValue != scrollValue )
-          zoom = .25f * ( lastScrollValue - scrollValue );
+          zoom = mouseZoomSensitivity * ( lastScrollValue - scrollValue );
 
-        InstancedModelDrawer.Camera.Position += new Vector3( 0, 1, 1 ) * zoom;
+        Camera camera = InstancedModelDrawer.Camera;
+        camera.Position += zoomVector * zoom;
+
+        // clamp zoom
+        float lookLength = ( camera.Position - camera.Target ).Length();
+        if ( lookLength < closeZoom || camera.Position.Y < 0 )
+          camera.Position = camera.Target + closeZoom * zoomVector;
+        else if ( lookLength > farZoom )
+          camera.Position = camera.Target + farZoom * zoomVector;
+
+        // camera pan (controller)
+        float panSensitivity = 5f;
+        if ( gamePadState.ThumbSticks.Left.X != 0 )
+        {
+          float movement = panSensitivity * gamePadState.ThumbSticks.Left.X;
+          camera.Target.X += movement;
+          camera.Position.X += movement;
+        }
+        if ( gamePadState.ThumbSticks.Left.Y != 0 )
+        {
+          float movement = panSensitivity * -gamePadState.ThumbSticks.Left.Y;
+          camera.Target.Z += movement;
+          camera.Position.Z += movement;
+        }
+
+        // place beacon with controller
+        if ( input.IsNewButtonPress( Buttons.A, PlayerIndex.One ) )
+          PlaceBeacon( 0 );
+        if ( input.IsNewButtonPress( Buttons.B, PlayerIndex.One ) )
+          PlaceBeacon( 1 );
+        if ( input.IsNewButtonPress( Buttons.X, PlayerIndex.One ) )
+          PlaceBeacon( 2 );
+        if ( input.IsNewButtonPress( Buttons.Y, PlayerIndex.One ) )
+          RemoveLastBeacon();
+
+        // click to set target position
+        MouseState mouseState = Mouse.GetState();
+        if ( mouseState.LeftButton == ButtonState.Pressed )
+          PlaceBeacon( 0 );
+        if ( mouseState.RightButton == ButtonState.Pressed )
+          RemoveLastBeacon();
+      }
+    }
+
+    public void PlaceBeacon( int beacon )
+    {
+      Viewport viewport = ZombieCraft.Instance.GraphicsDevice.Viewport;
+#if XBOX
+      Vector2 target = PickGround( viewport.Width / 2, viewport.Height / 2 );
+#else
+      Vector2 target = PickGround( Mouse.GetState().X, Mouse.GetState().Y );
+#endif
+      if ( beacons[beacon].Active )
+        placedBeacons.Remove( beacon );
+      beacons[beacon].ActivateAt( new Vector3( target.X, 0, target.Y ), GetRadiusForBeacon() );
+      placedBeacons.Add( beacon );
+    }
+
+    public void RemoveLastBeacon()
+    {
+      if ( placedBeacons.Count != 0 )
+      {
+        beacons[placedBeacons[placedBeacons.Count - 1]].Deactivate();
+        placedBeacons.RemoveAt( placedBeacons.Count - 1 );
       }
     }
 
@@ -199,14 +323,103 @@ namespace ZombieCraft
       ZombieCraft.Instance.TimeRuler.EndMark( 1, "Draw Instanced Models" );
 
       Camera camera = InstancedModelDrawer.Camera;
-      AISuperBrain.DrawGrid( camera.ViewMatrix, camera.ProjectionMatrix );
+      Matrix view = camera.ViewMatrix;
+      Matrix projection = camera.ProjectionMatrix;
 
-      //city.Draw( InstancedModelDrawer.Camera.ViewMatrix, InstancedModelDrawer.Camera.ProjectionMatrix );
+      AISuperBrain.DrawGrid( view, projection );
+      city.Draw( view, projection );
+      foreach ( Beacon beacon in beacons )
+        beacon.Draw( view, projection );
+
+      DrawHUD( view, projection );
 
       // If the game is transitioning on or off, fade it out to black.
       if ( TransitionPosition > 0 )
         ScreenManager.FadeBackBufferToBlack( 255 - TransitionAlpha );
     }
+
+    private void DrawHUD( Matrix view, Matrix projection )
+    {
+      Viewport viewport = ZombieCraft.Instance.GraphicsDevice.Viewport;
+      float globalScale = viewport.Height / 1080f;
+
+      // draw halo ghost
+      if ( beacons.Contains( beaconNotActivePredicate ) )
+      {
+        beaconHaloGhost.Scale = 2 * GetRadiusForBeacon();
+        beaconHaloGhost.Position = camera.Target;
+        beaconHaloGhost.Draw( view, projection );
+      }
+
+      SpriteBatch spriteBatch = ScreenManager.SpriteBatch;
+      spriteBatch.Begin( SpriteBlendMode.AlphaBlend, SpriteSortMode.Immediate, SaveStateMode.None );
+
+      // draw cursor
+      Vector2 position = new Vector2( viewport.Width / 2, viewport.Height / 2 );
+      Vector2 origin = new Vector2( cursor.Width / 2, cursor.Height / 2 );
+      float scale = .35f * globalScale;
+      spriteBatch.Draw( cursor, position, null, Color.White, 0f, origin, scale, SpriteEffects.None, 0f );
+
+      // draw available beacons' labels
+      float labelRadius = 80;
+      float angleYCoord = labelRadius / 2;
+      float angleXCoord = (float)Math.Sqrt( 3 ) * labelRadius / 2;
+      Vector2 labelOrigin = new Vector2( availableBeacons[0].Width, availableBeacons[0].Height ) / 2;
+      Vector2 labelPosition = Vector2.Zero;
+
+      float alpha = MathHelper.Lerp( .1f, .45f, .5f + .5f * (float)Math.Sin( totalUnpausedTime * 3 ) );
+      Color translucent = new Color( Color.White, alpha );
+
+      if ( !beacons[0].Active )
+      {
+        labelPosition = position + new Vector2( 0, -labelRadius ) * globalScale;
+        spriteBatch.Draw( availableBeacons[0], labelPosition, null, translucent,
+                          0f, labelOrigin, scale, SpriteEffects.None, 0f );
+      }
+      if ( !beacons[1].Active )
+      {
+        labelPosition = position + new Vector2( angleXCoord, angleYCoord ) * globalScale;
+        spriteBatch.Draw( availableBeacons[1], labelPosition, null, translucent,
+                          0f, labelOrigin, scale, SpriteEffects.None, 0f );
+      }
+      if ( !beacons[2].Active )
+      {
+        labelPosition = position + new Vector2( -angleXCoord, angleYCoord ) * globalScale;
+        spriteBatch.Draw( availableBeacons[2], labelPosition, null, translucent,
+                          0f, labelOrigin, scale, SpriteEffects.None, 0f );
+      }
+
+      spriteBatch.End();
+    }
+
+    private Vector2 PickGround( int sx, int sy )
+    {
+      Camera camera = InstancedModelDrawer.Camera;
+      Viewport viewport = ZombieCraft.Instance.GraphicsDevice.Viewport;
+      Matrix view = camera.ViewMatrix;
+      Matrix proj = camera.ProjectionMatrix;
+      Vector3 p0 = camera.Position;
+      Vector3 p1 = viewport.Unproject( new Vector3( sx, sy, 0 ), proj, view, Matrix.Identity );
+      float t = -p0.Y / ( p1.Y - p0.Y );
+
+      Vector2 dest = Vector2.Zero;
+      dest.X = p0.X + t * ( p1.X - p0.X );
+      dest.Y = p0.Z + t * ( p1.Z - p0.Z );
+
+      dest.X = MathHelper.Clamp( dest.X, AISuperBrain.GridMin.X, AISuperBrain.GridMax.X - .0001f );
+      dest.Y = MathHelper.Clamp( dest.Y, AISuperBrain.GridMin.Y, AISuperBrain.GridMax.Y - .0001f );
+      return dest;
+    }
+
+    private float GetRadiusForBeacon()
+    {
+      float lookLength = ( camera.Position - camera.Target ).Length();
+      return MathHelper.Lerp( minBeaconRadius, maxBeaconRadius,
+                              lookLength / ( farZoom - closeZoom ) );
+    }
+
+    Predicate<Beacon> beaconActivePredicate = b => b.Active;
+    Predicate<Beacon> beaconNotActivePredicate = b => !b.Active;
 
     #endregion
   }

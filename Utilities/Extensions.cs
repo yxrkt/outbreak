@@ -18,6 +18,29 @@ namespace Utility
       }
       return -1;
     }
+
+    public static bool Contains<T>( this T[] array, Predicate<T> match )
+    {
+      int length = array.Length;
+      for ( int i = 0; i < length; ++i )
+      {
+        if ( match( array[i] ) )
+          return true;
+      }
+      return false;
+    }
+
+    public static int Count<T>( this T[] array, Predicate<T> match )
+    {
+      int count = 0;
+      int length = array.Length;
+      for ( int i = 0; i < length; ++i )
+      {
+        if ( match( array[i] ) )
+          count++;
+      }
+      return count;
+    }
   }
 
   public static class StringBuilderExtentions

@@ -56,11 +56,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AI\AIGrid.cs" />
-    <Compile Include="AI\AIStates.cs" />
     <Compile Include="AI\AISuperBrain.cs" />
     <Compile Include="AI\CollisionManager.cs" />
     <Compile Include="AI\GridCellList.cs" />
+    <Compile Include="AI\PathGrid.cs" />
     <Compile Include="Entity\AABB.cs" />
+    <Compile Include="Entity\Beacon.cs" />
+    <Compile Include="Entity\Building.cs" />
     <Compile Include="Entity\City.cs" />
     <Compile Include="Entity\Entity.cs" />
     <Compile Include="Game.cs" />
@@ -68,6 +70,7 @@
     <Compile Include="Graphics\InstancedModelRenderData.cs" />
     <Compile Include="Graphics\InstanceTransformRef.cs" />
     <Compile Include="Graphics\ModelDrawer.cs" />
+    <Compile Include="Graphics\Quad.cs" />
     <Compile Include="Graphics\Vertex.cs" />
     <Compile Include="Graphics\WritableVertexBuffer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

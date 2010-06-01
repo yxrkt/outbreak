@@ -141,6 +141,12 @@ namespace ZombieCraft
       }
     }
 
+    public bool IsNewButtonPress( Buttons button, PlayerIndex? controllingPlayer )
+    {
+      PlayerIndex playerIndex;
+      return IsNewButtonPress( button, controllingPlayer, out playerIndex );
+    }
+
 
     /// <summary>
     /// Checks for a "menu select" input action.

@@ -24,6 +24,7 @@ namespace ZombieCraft
 
     GraphicsDeviceManager graphics;
     ScreenManager screenManager;
+    public ScreenManager ScreenManager { get { return screenManager; } }
 
     static ZombieCraft _instance;
     public static ZombieCraft Instance { get { return _instance; } }

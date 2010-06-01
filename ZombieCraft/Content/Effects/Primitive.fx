@@ -1,6 +1,7 @@
 float4x4 View;
 float4x4 Projection;
 
+float4  Color = { 1, 1, 1, 1 };
 texture Texture;
 sampler TextureSampler = 
 sampler_state
@@ -51,7 +52,7 @@ ColorVertexShaderOutput ColorVertexShader( ColorVertexShaderInput input )
 
 float4 ColorPixelShader( ColorVertexShaderOutput input ) : COLOR0
 {
-  return input.Color;
+  return input.Color * Color;
 }
 
 TextureVertexShaderOutput TextureVertexShader( TextureVertexShaderInput input )
@@ -68,7 +69,7 @@ TextureVertexShaderOutput TextureVertexShader( TextureVertexShaderInput input )
 
 float4 TexturePixelShader( TextureVertexShaderOutput input ) : COLOR0
 {
-  return tex2D( TextureSampler, input.TexCoord );
+  return tex2D( TextureSampler, input.TexCoord ) * Color;
 }
 
 

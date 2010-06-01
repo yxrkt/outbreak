@@ -54,6 +54,7 @@
     <XnaCompressContent>true</XnaCompressContent>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="DebugGrid.cs" />
     <Compile Include="Debug\GameDebug\DebugCommandUI.cs" />
     <Compile Include="Debug\GameDebug\DebugManager.cs" />
     <Compile Include="Debug\GameDebug\FpsCounter.cs" />
@@ -64,6 +65,7 @@
     <Compile Include="Debug\Utils\Layout.cs" />
     <Compile Include="Debug\Utils\StringBuilderExtensions.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="Geometry.cs" />
     <Compile Include="Pool.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -11,15 +11,23 @@ namespace ZombieCraft
   class AIGrid
   {
     GridCell[] cells;
+    PathGrid pathGrid;
     public readonly Vector2 Min, Max;
     public readonly int Rows, Cols;
     public readonly float CellColStep, CellRowStep;
     private readonly Color boxLineColor = Color.Red;
 
-    public GridCellList this[int row, int col]
+    public GridCell this[int row, int col]
     {
-      get { return cells[row * Cols + col].Items; }
+      get { return cells[row * Cols + col]; }
     }
+    public GridCell this[int index]
+    {
+      get { return cells[index]; }
+    }
+
+    Vector2[] tempAABBVerts = new Vector2[4];
+    List<int> tempWaypoints = new List<int>( 100 );
 
     // debug fields
     VertexPositionColor[] gridLines;
@@ -135,12 +143,12 @@ namespace ZombieCraft
       stringBuilder = new StringBuilder( 10 );
     }
 
-    public void AddItem( ref Entity entity )
+    public void AddEntity( ref Entity entity )
     {
       Vector2 min = Vector2.Clamp( entity.AABB.Min, Min, Max );
       Vector2 max = Vector2.Clamp( entity.AABB.Max, Min, Max );
 
-      // add the data to all touching cells
+      // add the entity to all touching cells
       float cellWidth = ( Max.X - Min.X ) / Cols;
       int colMin = (int)( ( min.X - Min.X ) / cellWidth );
       int colMax = (int)( ( max.X - Min.X ) / cellWidth );
@@ -149,44 +157,20 @@ namespace ZombieCraft
       int rowMin = (int)( ( min.Y - Min.Y ) / cellHeight );
       int rowMax = (int)( ( max.Y - Min.Y ) / cellHeight );
 
-      // make sure the max's don't go out of bounds
-      if ( colMax == Cols )
+      // make sure the maxs don't go out of bounds
+      if ( colMax >= Cols )
         colMax = colMin;
-      if ( rowMax == Rows )
+      if ( rowMax >= Rows )
         rowMax = rowMin;
 
-      GridCellListNode node = new GridCellListNode( entity.Index );
-      entity.GridNode = node;
+      EntityListNode node = new EntityListNode( entity.Index );
+      entity.ListNode = node;
 
-      if ( colMin == colMax )
+      for ( int r = rowMin; r <= rowMax; ++r )
       {
-        if ( rowMin == rowMax )
+        for ( int c = colMin; c <= colMax; ++c )
         {
-          // the GridData fits nicely into one cell
-          cells[Cols * rowMin + colMin].Items.Add( node );
-        }
-        else
-        {
-          // the GridData touches two vertical neighbors
-          cells[Cols * rowMin + colMin].Items.Add( node );
-          cells[Cols * rowMax + colMin].Items.Add( node );
-        }
-      }
-      else
-      {
-        if ( rowMin == rowMax )
-        {
-          // the GridData touches two horizontal neighbors
-          cells[Cols * rowMin + colMin].Items.Add( node );
-          cells[Cols * rowMin + colMax].Items.Add( node );
-        }
-        else
-        {
-          // the GridData touches a square of four neighbors
-          cells[Cols * rowMin + colMin].Items.Add( node );
-          cells[Cols * rowMin + colMax].Items.Add( node );
-          cells[Cols * rowMax + colMin].Items.Add( node );
-          cells[Cols * rowMax + colMax].Items.Add( node );
+          cells[Cols * r + c].Entities.Add( node );
         }
       }
 
@@ -201,14 +185,14 @@ namespace ZombieCraft
       }
     }
 
-    public void RemoveItem( ref Entity entity )
+    public void RemoveEntity( ref Entity entity )
     {
       // this is slow, can be made faster
       foreach ( GridCell cell in cells )
-        cell.Items.Remove( entity.Index );
+        cell.Entities.Remove( entity.Index );
     }
 
-    public void UpdateItem( ref Entity entity )
+    public void UpdateEntity( ref Entity entity )
     {
       int minCol = (int)( ( entity.AABB.Min.X - Min.X ) / CellColStep );
       int maxCol = (int)( ( entity.AABB.Max.X - Min.X ) / CellColStep );
@@ -406,19 +390,19 @@ namespace ZombieCraft
           {
             if ( i == cellType00 )
             {
-              if ( entity.GridNode.parent[i] == null )
+              if ( entity.ListNode.parent[i] == null )
               {
-                cell00.Items.Add( entity.GridNode );
+                cell00.Entities.Add( entity.ListNode );
               }
-              else if ( entity.GridNode.parent[i] != cell00.Items )
+              else if ( entity.ListNode.parent[i] != cell00.Entities )
               {
-                entity.GridNode.parent[i].Remove( entity.GridNode );
-                cell00.Items.Add( entity.GridNode );
+                entity.ListNode.parent[i].Remove( entity.ListNode );
+                cell00.Entities.Add( entity.ListNode );
               }
             }
-            else if ( entity.GridNode.parent[i] != null )
+            else if ( entity.ListNode.parent[i] != null )
             {
-              entity.GridNode.parent[i].Remove( entity.GridNode );
+              entity.ListNode.parent[i].Remove( entity.ListNode );
             }
           }
           break;
@@ -432,31 +416,31 @@ namespace ZombieCraft
           {
             if ( i == cellType00 )
             {
-              if ( entity.GridNode.parent[i] == null )
+              if ( entity.ListNode.parent[i] == null )
               {
-                cell00.Items.Add( entity.GridNode );
+                cell00.Entities.Add( entity.ListNode );
               }
-              else if ( entity.GridNode.parent[i] != cell00.Items )
+              else if ( entity.ListNode.parent[i] != cell00.Entities )
               {
-                entity.GridNode.parent[i].Remove( entity.GridNode );
-                cell00.Items.Add( entity.GridNode );
+                entity.ListNode.parent[i].Remove( entity.ListNode );
+                cell00.Entities.Add( entity.ListNode );
               }
             }
             else if ( i == cellType01 )
             {
-              if ( entity.GridNode.parent[i] == null )
+              if ( entity.ListNode.parent[i] == null )
               {
-                cell01.Items.Add( entity.GridNode );
+                cell01.Entities.Add( entity.ListNode );
               }
-              else if ( entity.GridNode.parent[i] != cell01.Items )
+              else if ( entity.ListNode.parent[i] != cell01.Entities )
               {
-                entity.GridNode.parent[i].Remove( entity.GridNode );
-                cell01.Items.Add( entity.GridNode );
+                entity.ListNode.parent[i].Remove( entity.ListNode );
+                cell01.Entities.Add( entity.ListNode );
               }
             }
-            else if ( entity.GridNode.parent[i] != null )
+            else if ( entity.ListNode.parent[i] != null )
             {
-              entity.GridNode.parent[i].Remove( entity.GridNode );
+              entity.ListNode.parent[i].Remove( entity.ListNode );
             }
           }
           break;
@@ -470,31 +454,31 @@ namespace ZombieCraft
           {
             if ( i == cellType00 )
             {
-              if ( entity.GridNode.parent[i] == null )
+              if ( entity.ListNode.parent[i] == null )
               {
-                cell00.Items.Add( entity.GridNode );
+                cell00.Entities.Add( entity.ListNode );
               }
-              else if ( entity.GridNode.parent[i] != cell00.Items )
+              else if ( entity.ListNode.parent[i] != cell00.Entities )
               {
-                entity.GridNode.parent[i].Remove( entity.GridNode );
-                cell00.Items.Add( entity.GridNode );
+                entity.ListNode.parent[i].Remove( entity.ListNode );
+                cell00.Entities.Add( entity.ListNode );
               }
             }
             else if ( i == cellType10 )
             {
-              if ( entity.GridNode.parent[i] == null )
+              if ( entity.ListNode.parent[i] == null )
               {
-                cell10.Items.Add( entity.GridNode );
+                cell10.Entities.Add( entity.ListNode );
               }
-              else if ( entity.GridNode.parent[i] != cell10.Items )
+              else if ( entity.ListNode.parent[i] != cell10.Entities )
               {
-                entity.GridNode.parent[i].Remove( entity.GridNode );
-                cell10.Items.Add( entity.GridNode );
+                entity.ListNode.parent[i].Remove( entity.ListNode );
+                cell10.Entities.Add( entity.ListNode );
               }
             }
-            else if ( entity.GridNode.parent[i] != null )
+            else if ( entity.ListNode.parent[i] != null )
             {
-              entity.GridNode.parent[i].Remove( entity.GridNode );
+              entity.ListNode.parent[i].Remove( entity.ListNode );
             }
           }
           break;
@@ -512,56 +496,129 @@ namespace ZombieCraft
           {
             if ( i == cellType00 )
             {
-              if ( entity.GridNode.parent[i] == null )
+              if ( entity.ListNode.parent[i] == null )
               {
-                cell00.Items.Add( entity.GridNode );
+                cell00.Entities.Add( entity.ListNode );
               }
-              else if ( entity.GridNode.parent[i] != cell00.Items )
+              else if ( entity.ListNode.parent[i] != cell00.Entities )
               {
-                entity.GridNode.parent[i].Remove( entity.GridNode );
-                cell00.Items.Add( entity.GridNode );
+                entity.ListNode.parent[i].Remove( entity.ListNode );
+                cell00.Entities.Add( entity.ListNode );
               }
             }
             else if ( i == cellType01 )
             {
-              if ( entity.GridNode.parent[i] == null )
+              if ( entity.ListNode.parent[i] == null )
               {
-                cell01.Items.Add( entity.GridNode );
+                cell01.Entities.Add( entity.ListNode );
               }
-              else if ( entity.GridNode.parent[i] != cell01.Items )
+              else if ( entity.ListNode.parent[i] != cell01.Entities )
               {
-                entity.GridNode.parent[i].Remove( entity.GridNode );
-                cell01.Items.Add( entity.GridNode );
+                entity.ListNode.parent[i].Remove( entity.ListNode );
+                cell01.Entities.Add( entity.ListNode );
               }
             }
             else if ( i == cellType10 )
             {
-              if ( entity.GridNode.parent[i] == null )
+              if ( entity.ListNode.parent[i] == null )
               {
-                cell10.Items.Add( entity.GridNode );
+                cell10.Entities.Add( entity.ListNode );
               }
-              else if ( entity.GridNode.parent[i] != cell10.Items )
+              else if ( entity.ListNode.parent[i] != cell10.Entities )
               {
-                entity.GridNode.parent[i].Remove( entity.GridNode );
-                cell10.Items.Add( entity.GridNode );
+                entity.ListNode.parent[i].Remove( entity.ListNode );
+                cell10.Entities.Add( entity.ListNode );
               }
             }
             else if ( i == cellType11 )
             {
-              if ( entity.GridNode.parent[i] == null )
+              if ( entity.ListNode.parent[i] == null )
               {
-                cell11.Items.Add( entity.GridNode );
+                cell11.Entities.Add( entity.ListNode );
               }
-              else if ( entity.GridNode.parent[i] != cell11.Items )
+              else if ( entity.ListNode.parent[i] != cell11.Entities )
               {
-                entity.GridNode.parent[i].Remove( entity.GridNode );
-                cell11.Items.Add( entity.GridNode );
+                entity.ListNode.parent[i].Remove( entity.ListNode );
+                cell11.Entities.Add( entity.ListNode );
               }
             }
           }
           break;
       }
       /**/
+    }
+
+    public void AddBuilding( ref Building building )
+    {
+      Vector2 min = Vector2.Clamp( building.AABB.Min, Min, Max );
+      Vector2 max = Vector2.Clamp( building.AABB.Max, Min, Max );
+
+      float cellWidth = ( Max.X - Min.X ) / Cols;
+      int colMin = (int)( ( min.X - Min.X ) / cellWidth );
+      int colMax = (int)( ( max.X - Min.X ) / cellWidth );
+
+      float cellHeight = ( Max.Y - Min.Y ) / Rows;
+      int rowMin = (int)( ( min.Y - Min.Y ) / cellHeight );
+      int rowMax = (int)( ( max.Y - Min.Y ) / cellHeight );
+
+      // make sure the maxs don't go out of bounds
+      if ( colMax == Cols )
+        colMax = colMin;
+      if ( rowMax == Rows )
+        rowMax = rowMin;
+
+      for ( int r = rowMin; r <= rowMax; ++r )
+      {
+        for ( int c = colMin; c <= colMax; ++c )
+        {
+          int index = Cols * r + c;
+          if ( TestBuildingVsAABB( building, new AABB( cells[index].Min, cells[index].Max ) ) )
+            cells[index].Buildings.Add( building.Index );
+        }
+      }
+    }
+
+    public void RemoveBuilding( ref Building building )
+    {
+    }
+
+    public void InitializePathGrid( int squareSize )
+    {
+      int xDimension = (int)( Max.X - Min.X ) / squareSize;
+      int yDimension = (int)( Max.Y - Min.Y ) / squareSize;
+      pathGrid = new PathGrid( Min, Max, xDimension, yDimension, DetermineIfPathCellIsWalkable );
+
+      List<int> path = new List<int>( 10 );
+      pathGrid.FindPath( 0, 0, 7, 7, path );
+    }
+
+    public void GeneratePath( ref Vector2 start, ref Vector2 finish, List<Vector2> output )
+    {
+#if DEBUG
+      System.Diagnostics.Debug.Assert( output.Count == 0, "output path must start as empty" );
+#endif
+      if ( !pathGrid.IsWalkableAt( ref start ) )
+      {
+        output.Add( start );
+        output.Add( start );
+        return;
+      }
+
+      int startRow = (int)( pathGrid.Rows * ( start.Y - pathGrid.Min.Y ) / ( pathGrid.Max.Y - pathGrid.Min.Y ) );
+      int startCol = (int)( pathGrid.Cols * ( start.X - pathGrid.Min.X ) / ( pathGrid.Max.X - pathGrid.Min.X ) );
+      int finishRow = (int)( pathGrid.Rows * ( finish.Y - pathGrid.Min.Y ) / ( pathGrid.Max.Y - pathGrid.Min.Y ) );
+      int finishCol = (int)( pathGrid.Cols * ( finish.X - pathGrid.Min.X ) / ( pathGrid.Max.X - pathGrid.Min.X ) );
+
+      tempWaypoints.Clear();
+      pathGrid.FindPath( startRow, startCol, finishRow, finishCol, tempWaypoints );
+      pathGrid.ConvertPath( tempWaypoints, output );
+
+      while ( output.Count < 2 )
+        output.Add( finish );
+
+      output[0] = start;
+      if ( pathGrid.IsWalkableAt( ref finish ) )
+        output[output.Count - 1] = finish;
     }
 
     public void Draw( Matrix view, Matrix projection )
@@ -575,7 +632,7 @@ namespace ZombieCraft
       int vertCount = 0;
       foreach ( GridCell cell in cells )
       {
-        for ( GridCellListNode node = cell.Items.First(); node != null; node = cell.Items.Next( node ) )
+        for ( EntityListNode node = cell.Entities.First(); node != null; node = cell.Entities.Next( node ) )
         {
           if ( node.debugFrame == frame )
           {
@@ -592,20 +649,25 @@ namespace ZombieCraft
       lineEffect.Begin();
       lineEffect.CurrentTechnique.Passes[0].Begin();
 
-      device.DrawUserPrimitives( PrimitiveType.LineList, gridLines,
-                                 0, gridLines.Length / 2 );
+      pathGrid.Draw();
+      
+      //device.DrawUserPrimitives( PrimitiveType.LineList, gridLines,
+      //                           0, gridLines.Length / 2 );
 
-      device.DrawUserPrimitives( PrimitiveType.LineList, boxLineVerts,
-                                 0, vertCount / 2 );
+      //device.DrawUserPrimitives( PrimitiveType.LineList, boxLineVerts,
+      //                           0, vertCount / 2 );
+
+      for ( int i = 0; i < Building.Buildings.Length; ++i )
+        Building.Buildings[i].DrawBoundingData( device );
 
       lineEffect.CurrentTechnique.Passes[0].End();
       lineEffect.End();
 
-      DrawCellCounts( view, projection );
+      //DrawCellCounts( view, projection, 1 );
 #endif
     }
 
-    private void DrawCellCounts( Matrix view, Matrix projection )
+    private void DrawCellCounts( Matrix view, Matrix projection, int type )
     {
       Matrix viewProjection = view * projection;
 
@@ -622,7 +684,10 @@ namespace ZombieCraft
         screenPos /= screenPos.W;
 
         stringBuilder.Clear();
-        stringBuilder.AppendInt( cell.Items.Count );
+        if ( type == 0 )
+          stringBuilder.AppendInt( cell.Entities.Count );
+        else
+          stringBuilder.AppendInt( cell.Buildings.Count );
 
         Vector2 position = new Vector2( ( .5f * screenPos.X + .5f ) * viewport.Width,
                                         ( -.5f * screenPos.Y + .5f ) * viewport.Height );
@@ -648,20 +713,81 @@ namespace ZombieCraft
       boxLineVerts[vertCount++].Position = new Vector3( entity.AABB.Max.X, 0, entity.AABB.Min.Y );
       boxLineVerts[vertCount++].Position = new Vector3( entity.AABB.Min.X, 0, entity.AABB.Min.Y );
     }
+
+    private bool TestBuildingVsAABB( Building building, AABB aabb )
+    {
+      Vector2 min = Vector2.Clamp( building.AABB.Min, Min, Max );
+      Vector2 max = Vector2.Clamp( building.AABB.Max, Min, Max );
+
+      float cellWidth = ( Max.X - Min.X ) / Cols;
+      int colMin = (int)( ( min.X - Min.X ) / cellWidth );
+      int colMax = (int)( ( max.X - Min.X ) / cellWidth );
+
+      float cellHeight = ( Max.Y - Min.Y ) / Rows;
+      int rowMin = (int)( ( min.Y - Min.Y ) / cellHeight );
+      int rowMax = (int)( ( max.Y - Min.Y ) / cellHeight );
+
+      // make sure the maxs don't go out of bounds
+      if ( colMax == Cols )
+        colMax = colMin;
+      if ( rowMax == Rows )
+        rowMax = rowMin;
+
+      // test polygon's aabb against aabb (effectively aabb version of SAT)
+      if ( aabb.Max.X < min.X || aabb.Min.X > max.X ) return false;
+      if ( aabb.Max.Y < min.Y || aabb.Min.Y > max.Y ) return false;
+
+      tempAABBVerts[0] = aabb.Min;
+      tempAABBVerts[1] = new Vector2( aabb.Min.X, aabb.Max.Y );
+      tempAABBVerts[2] = aabb.Max;
+      tempAABBVerts[3] = new Vector2( aabb.Max.X, aabb.Min.Y );
+
+      // SAT using building's axes
+      for ( int i = 0; i < building.Boundary.Length; ++i )
+      {
+        float lower = float.MaxValue;
+        float upper = float.MinValue;
+
+        for ( int j = 0; j < tempAABBVerts.Length; ++j )
+        {
+          Vector2 disp = building.Boundary[i] - tempAABBVerts[j];
+          float proj = Vector2.Dot( disp, building.Normals[i] );
+          if ( proj < lower ) lower = proj;
+          if ( proj > upper ) upper = proj;
+        }
+
+        if ( upper < 0 || lower > building.SATProjections[i] )
+          return false;
+      }
+
+      return true;
+    }
+
+    private bool DetermineIfPathCellIsWalkable( AABB aabb, Building[] buildings )
+    {
+      for ( int i = 0; i < buildings.Length; ++i )
+      {
+        if ( TestBuildingVsAABB( buildings[i], aabb ) )
+          return false;
+      }
+      return true;
+    }
   }
 
   struct GridCell
   {
     public readonly Vector2 Min;
     public readonly Vector2 Max;
-    public readonly GridCellList Items;
+    public readonly EntityList Entities;
+    public readonly List<int> Buildings;
 
     public GridCell( Vector2 min, Vector2 max, int row, int col )
     {
       Min = min;
       Max = max;
 
-      Items = new GridCellList( row, col );
+      Entities = new EntityList( row, col );
+      Buildings = new List<int>( 10 );
     }
   }
 }
